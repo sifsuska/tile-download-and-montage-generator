@@ -103,10 +103,16 @@ L.gridLayer.debugCoords = function(opts) {
 		//$.getJSON('kamparkab_kec.geojson', function (data) {
 			//tambahkan ke layer Leaflet yang tadinya masih null
 			bukittinggi.addData(data);
-			map.fitBounds(bukittinggi.getBounds());
+			//map.fitBounds(bukittinggi.getBounds());
 			
 		});
-
+		
+		var pku = L.geoJson(null);
+		$.getJSON('pekanbaru_kel.geojson', function (data) {
+			pku.addData(data);
+			map.fitBounds(pku.getBounds());
+			
+		});
 		
 		//DEFAULT
 		//local_worldimagery.addTo(map);
@@ -123,6 +129,7 @@ L.gridLayer.debugCoords = function(opts) {
 		
 		var checkboxedLayers = {
 			"debug":L.gridLayer.debugCoords()
+			,"Pekanbaru": pku
 			,"Kampar": bukittinggi
 		};
 		
