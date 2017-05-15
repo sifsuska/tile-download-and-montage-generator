@@ -1,0 +1,280 @@
+<html>
+<script src="proj4.js"></script>
+<script>
+
+function long2tile(lon,zoom) {
+  return (Math.floor((lon+180)/360*Math.pow(2,zoom))); 
+}
+function lat2tile(lat,zoom)  { return (Math.floor((1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 *Math.pow(2,zoom))); }
+ 
+ 
+function tile2lon(x,z) {
+  return (x/Math.pow(2,z)*360-180);
+}
+function tile2lat(y,z) {
+	var n=Math.PI-2*Math.PI*y/Math.pow(2,z);
+	return (180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))));
+}
+
+var BoundingBox = function(x,y,z){
+    this.north = tile2lat(y, z);
+    this.south = tile2lat(y + 1, z);
+    this.west = tile2lon(x, z);
+    this.east = tile2lon(x + 1, z);
+}
+
+
+
+
+</script>
+<h1>Batch Generator</h1>
+<div>This script is to create batch files to download tiles from some famous tile server, montage it with ImageMagick and then georeference it with QGIS.</div>
+<h2>Tile Number (Slippy Map)</h2>
+<div>Please put your tile number and zoom level according Slippy Map Algorithm</div>
+
+x1=<input type="text"  id="x1" placeholder="x1" value="102432">x2=<input type="text"  id="x2" placeholder="x2" value="102443"><br/>
+y1=<input type="text"  id="y1" placeholder="y1" value="65360">y2=<input type="text"  id="y2" placeholder="y2" value="65371"><br/>
+<button type="button" id="prevZoom" onclick="prevZoom();">Previous Zoom</button>
+zoom=<input type="text"  id="z" placeholder="z" value="17"><br/>
+<button type="button" id="nextZoom" onclick="nextZoom();">Next Zoom</button>
+<br/>
+<br/>
+<br/>
+<button type="button" id="button_rec" value="" class="btn btn-default" onclick="recalculateBoundingBox();">Create .point</button><br/>
+<br/>
+<br/>Log<br/><textarea id="ta" cols=100 rows=20></textarea>
+<br/><br/><button type="button" id="button_wget" onclick="createWgetBatch();">Create wget *.BAT file</button><br/>
+<br/>wget<br/><textarea id="wget" cols=100 rows=20></textarea>
+
+<br/><br/><button type="button" id="button_wget" onclick="createMontage();">Create montage *.BAT file</button><br/>
+<br/>montage<br/><textarea id="montage" cols=100 rows=20></textarea>
+<script>
+
+function $(x){return document.getElementById(x);}
+var x1 = $('x1');
+var y1 = $('y1');
+var x2 = $('x2');
+var y2 = $('y2');
+var z = $('z');
+
+
+var ta=$('ta');
+var wget=$('wget');
+var montage=$('montage');
+
+
+function recalculateBoundingBox(){
+	var i_x1=parseInt(x1.value);
+	var i_y1=parseInt(y1.value);
+	var i_x2=parseInt(x2.value);
+	var i_y2=parseInt(y2.value);
+	var i_z=parseInt(z.value);
+	
+	ta.value=createPoints(i_x1,i_y1,i_x2,i_y2,i_z);
+
+}
+
+function createPoints(i_x1,i_y1,i_x2,i_y2,i_z){
+	var tempe1 = new BoundingBox(i_x1,i_y1,i_z);
+	var tempe2 = new BoundingBox(i_x2,i_y2,i_z);
+
+	var nw3857 = proj4('EPSG:4326','EPSG:3857',[tempe1.west,tempe1.north]);
+
+	var se3857 = proj4('EPSG:4326','EPSG:3857',[tempe2.east,tempe2.south]);
+
+	var cols = (i_x2-i_x1+1);
+	var rows = (i_y2-i_y1+1);
+	
+	return "x1="+i_x1+"\n"
+		+"y1="+i_y1+"\n"
+		+"x2="+i_x2+"\n"
+		+"y2="+i_y2+"\n"
+		+"z="+i_z+"\n"
+		+"\n\n-----\n\n"
+		+"BoundingBox4326 1\n"
+		+JSON.stringify(tempe1)
+		+"\n\n-----\n\n"
+		+"BoundingBox4326 2\n"
+		+JSON.stringify(tempe2)
+		+"\n\n-----\n\n"
+		+"Cols="+ cols
+		+"\n\n-----\n\n"
+		+"Rows="+ rows
+		+"\n\n-----\n\n"
+		+"Ukuran Citra="+ (cols*256)+"x"+(rows*256)
+		+"\n\n-----\n\n"
+		+i_z+"-"+i_x1+"_"+i_x2+"-"+i_y1+"_"+i_y2+"-"+(cols*256)+"x"+(rows*256) +".points\n"
+		+"mapX,mapY,pixelX,pixelY,enable\n"
+		+nw3857[0]+","+nw3857[1]+",0,0,1\n"
+		+se3857[0]+","+nw3857[1]+","+(cols*256)+",0,1\n"
+		+nw3857[0]+","+se3857[1]+",0,-"+(rows*256)+",1\n"
+		+se3857[0]+","+se3857[1]+","+(cols*256)+",-"+(rows*256)+",1\n";
+		//+"-----\n\n"
+
+}
+
+/*
+Berikut file .point nya dari GeoReferencer
+mapX,mapY,pixelX,pixelY,enable
+11168367.07680367305874825,-29351.81886150869831908,0,0,1
+11178151.01642417535185814,-29351.81886150869831908,2048,0,1
+11168367.07680367305874825,-36689.77357688481424702,0,-1536,1
+11178151.01642417535185814,-36689.77357688481424702,2048,-1536,1
+
+//seems JavaScript round that floating point
+mapX,mapY,pixelX,pixelY,enable
+11168367.076803673,-29351.8188615087,0,0,1
+11178151.016424175,-29351.8188615087,2048,0,1
+11168367.076803673,-36689.773576884814,0,-1536,1
+11178151.016424175,-36689.773576884814,2048,-1536,1
+
+*/
+window.onerror=function(){return false;}
+//x.onchange=recalculateBoundingBox();
+//y.onchange=recalculateBoundingBox();
+//z.onchange=recalculateBoundingBox();
+
+/*
+VBA:
+    For x = x1 To x2
+        For y = y1 To y2
+            Print #fileNumber, "wget -O " & z & "-" & x & "-" & y & ".jpg " & "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/" & z & "/" & y & "/" & x
+        Next y
+    Next x
+	
+	//wget -O 15-25516-16408.jpg http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/15/16408/25516
+*/
+function createWgetBatch(){
+
+	var i_x1=parseInt(x1.value);
+	var i_y1=parseInt(y1.value);
+	var i_x2=parseInt(x2.value);
+	var i_y2=parseInt(y2.value);
+	var i_z=parseInt(z.value);
+	wget.value="";//reset
+	for(var x=i_x1;x<=i_x2;x++){
+		for(var y=i_y1;y<=i_y2;y++){
+			wget.value+="\nwget -O " + i_z + "-" + x + "-" + y + ".jpg " + "http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/" + i_z + "/" + y + "/" + x
+		}
+	}
+}
+
+/*
+VBA:
+    Print #fileNumber, "montage -mode concatenate -tile " & (x2 - x1 + 1) & " "
+    For y = y1 To y2
+        For x = x1 To x2
+            Print #fileNumber, z & "-" & x & "-" & y & ".jpg "
+        Next x
+    Next y
+    Print #fileNumber, " out.jpg"
+    Print #fileNumber, "Pause"
+    Close #fileNumber
+*/
+
+function createMontage(){
+	var i_x1=parseInt(x1.value);
+	var i_y1=parseInt(y1.value);
+	var i_x2=parseInt(x2.value);
+	var i_y2=parseInt(y2.value);
+	var i_z=parseInt(z.value);
+	
+	montage.value= createMontage2(i_x1,i_y1,i_x2,i_y2,i_z);
+
+	
+}
+
+function createMontage2(i_x1,i_y1,i_x2,i_y2,i_z){
+
+	var cols = (i_x2-i_x1+1);
+	var rows = (i_y2-i_y1+1);
+	
+	var tmp_str = "montage -mode concatenate -tile "+(i_x2-i_x1+1);
+
+	for(var y=i_y1;y<=i_y2;y++){
+		for(var x=i_x1;x<=i_x2;x++){
+			tmp_str +=" " + i_z + "-" + x + "-" + y + ".jpg ";
+		}
+	}	
+	
+	tmp_str+=" "+i_z+"-"+i_x1+"_"+i_x2+"-"+i_y1+"_"+i_y2+"-"+(cols*256)+"x"+(rows*256)+".jpg";
+	return tmp_str;
+
+}
+
+function nextZoom(){
+	var i_x1=parseInt(x1.value);
+	var i_y1=parseInt(y1.value);
+	var i_x2=parseInt(x2.value);
+	var i_y2=parseInt(y2.value);
+	var i_z=parseInt(z.value);
+	
+	x1.value=i_x1*2;
+	x2.value=i_x2*2+1;
+	y1.value=i_y1*2;
+	y2.value=i_y2*2+1;
+	z.value=i_z+1;
+	
+}
+
+function prevZoom(){
+	var i_x1=parseInt(x1.value);
+	var i_y1=parseInt(y1.value);
+	var i_x2=parseInt(x2.value);
+	var i_y2=parseInt(y2.value);
+	var i_z=parseInt(z.value);
+	
+	x1.value=parseInt(i_x1/2);
+	x2.value=parseInt(i_x2/2);
+	y1.value=parseInt(i_y1/2);
+	y2.value=parseInt(i_y2/2);
+	z.value =parseInt(i_z-1);
+	
+}
+
+/**
+ * hidden function, easter eggs, untuk mengisi nilai xyz Kab. Kampar
+ */
+function initKampar(){
+x1.value=796*2
+//1592
+x2.value=801*2+1
+//1603
+y1.value=508*2
+//1016
+y2.value=513*2+1
+//1027
+z.value=11
+//"11"
+}
+
+// bagi empat xyz agar lebih ringan dalam me montage
+function bagiEmpat(){
+	var i_x1=parseInt(x1.value);
+	var i_y1=parseInt(y1.value);
+	var i_x2=parseInt(x2.value);
+	var i_y2=parseInt(y2.value);
+	var i_z=parseInt(z.value);
+	
+	var i_xt = parseInt(i_x1+(i_x2-i_x1)/2);
+	var i_yt = parseInt(i_y1+(i_y2-i_y1)/2);
+	
+	// x1 .. xt ... x2
+	// y1
+	// yt
+	// y2
+	
+	
+	ta.value=createPoints(i_x1,i_y1,i_xt,i_yt,i_z);
+	ta.value+=createPoints(i_xt+1,i_y1,i_x2,i_yt,i_z);
+	ta.value+=createPoints(i_x1,i_yt+1,i_xt,i_y2,i_z);
+	ta.value+=createPoints(i_xt+1,i_yt+1,i_x2,i_y2,i_z);
+	
+	
+	montage.value= createMontage2(i_x1,i_y1,i_xt,i_yt,i_z)+"\n\n\n";
+	montage.value+=createMontage2(i_xt+1,i_y1,i_x2,i_yt,i_z)+"\n\n\n";
+	montage.value+=createMontage2(i_x1,i_yt+1,i_xt,i_y2,i_z)+"\n\n\n";
+	montage.value+=createMontage2(i_xt+1,i_yt+1,i_x2,i_y2,i_z);
+}
+</script>
+</html>
