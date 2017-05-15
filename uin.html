@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>UIN Offline Leaflet</title>
+    <style>
+      html, body, #map{
+        height: 100%;
+        margin: 0px;
+        padding: 0px
+      }
+			.leaflet-control-attribution { display:none!important}
+    </style>
+	
+<link rel="stylesheet" href="leaflet.css" />
+<script src="leaflet.js"></script>
+<script src="jquery-2.1.4.min.js"></script>
+</head>
+<body>
+	<div id="map"></div>
+	<script>
+
+		var bukittinggi_latlong={lng:100.36747,lat:-0.30459};
+		
+		
+		// load DOM kita yang id nya map dan tampilkan peta
+		//var map = L.map('map').setView({lng:100.36747,lat:-0.30459}, 15);
+		var map = L.map('map').setView({ lat: 0.32036546158961193, lng: 101.06760631448934 }, 9);
+		
+/*
+Object { lat: 0.32036546158961193, lng: 101.06760631448934 }
+map.getZoom()
+9
+JSON.stringify(map.getBounds())
+"{"_southWest":{"lat":-0.5712795966325395,"lng":99.19281005859376},"_northEast":{"lat":1.2111524670742526,"lng":102.94189453125001}}"
+*/		
+		
+		
+
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+
+		//Localcopy of ESRI World Imagery
+		var local_worldimagery =  L.tileLayer(
+			'{z}-{x}-{y}.jpg',
+			{
+				maxZoom:15
+				,minZoom:15
+				,bounds: L.latLngBounds(L.latLng(-0.21972602392080667,100.283203125), L.latLng(-0.395504671531996,100.5029296875))
+			}
+		);
+		
+		var tileLayer_ESRI_World_Imagery = L.tileLayer('http://server.arcgisonline.com/ArcGIS/' 
+           + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+					 ,{ attribution: 'ESRI', maxZoom:17
+					 });		
+		
+		
+//		//Localcopy of ESRI World Physical
+//		var local_worldPhysical =  L.tileLayer(
+//			'ESRI_WorldPhysical/{z}/{x}/{y}.jpg',
+//			{maxZoom:6}
+//		);
+//
+//		var stamen_toner =  L.tileLayer(
+//			'stamen_toner/{z}/{x}/{y}.png',
+//			{maxZoom:5}
+//		);
+//		var stamen_watercolor =  L.tileLayer(
+//			'stamen_watercolor/{z}/{x}/{y}.jpg',
+//			{maxZoom:5}
+//		);		
+		
+//http://leafletjs.com/examples/extending/extending-2-layers.html
+L.GridLayer.DebugCoords = L.GridLayer.extend({
+    createTile: function (coords) {
+        var tile = document.createElement('div');
+        tile.innerHTML = [coords.x, coords.y, coords.z].join(', ');
+        tile.style.outline = '1px solid yellow';
+        return tile;
+    }
+});
+
+//now create an instance of our Plugin
+L.gridLayer.debugCoords = function(opts) {
+    return new L.GridLayer.DebugCoords(opts);
+};
+
+
+		var bukittinggi = L.geoJson(null);
+		//jika ingin menambahkan GeoJSON, pastikan Anda membuatnya hanya 5 angka
+		// di belakang koma.
+		//silahkan bandingkan dengan file reguler, terdapat signifikan kompresi
+		$.getJSON('kampar5.geojson', function (data) {
+		//$.getJSON('kamparkab_kec.geojson', function (data) {
+			//tambahkan ke layer Leaflet yang tadinya masih null
+			bukittinggi.addData(data);
+			map.fitBounds(bukittinggi.getBounds());
+			
+		});
+
+		
+		//DEFAULT
+		//local_worldimagery.addTo(map);
+		tileLayer_ESRI_World_Imagery.addTo(map);
+		
+		var baseMaps = {
+				//"ESRI World Imagery (local)":local_worldimagery
+				"ESRI World Imagery (online)":tileLayer_ESRI_World_Imagery
+				//,"ESRI World Physical":local_worldPhysical
+				//,"Cesium Black Marble":local_blackmarble
+				//,"Stamen Toner":stamen_toner
+				//,"Stamen Watercolor":stamen_watercolor
+		};
+		
+		var checkboxedLayers = {
+			"debug":L.gridLayer.debugCoords()
+			,"Kampar": bukittinggi
+		};
+		
+	
+L.control.layers(baseMaps,checkboxedLayers).addTo(map);		
+
+
+
+
+
+
+
+
+
+var popup = L.popup();
+
+function onMapClick(e) {
+    popup
+        .setLatLng(e.latlng)
+        .setContent(//"<textarea>"
+			"You clicked the map at <br/>" + e.latlng.toString()+ "<br/>zoom="+map.getZoom()
+			+"<br/></br/>Map Center: " + JSON.stringify(map.getCenter())
+			+"<br/></br/>Map Bounds: " + JSON.stringify(map.getBounds())
+			//+"</textarea>"
+		).openOn(map);
+
+
+}
+
+map.on('click', onMapClick);
+		
+	</script>
+</body>
+</html>
