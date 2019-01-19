@@ -103,13 +103,28 @@ function createPoints(i_x1,i_y1,i_x2,i_y2,i_z){
 		+"\n\n-----\n\n"
 		+"Ukuran Citra="+ (cols*256)+"x"+(rows*256)
 		+"\n\n-----\n\n"
-		+i_z+"-"+i_x1+"_"+i_x2+"-"+i_y1+"_"+i_y2+"-"+(cols*256)+"x"+(rows*256) +".points\n"
+		+i_z+"-"+i_x1+"_"+i_x2+"-"+i_y1+"_"+i_y2+"-"+(cols*256)+"x"+(rows*256) +".jpg.points\n"
 		+"mapX,mapY,pixelX,pixelY,enable\n"
 		+nw3857[0]+","+nw3857[1]+",0,0,1\n"
 		+se3857[0]+","+nw3857[1]+","+(cols*256)+",0,1\n"
 		+nw3857[0]+","+se3857[1]+",0,-"+(rows*256)+",1\n"
-		+se3857[0]+","+se3857[1]+","+(cols*256)+",-"+(rows*256)+",1\n";
-		//+"-----\n\n"
+		+se3857[0]+","+se3857[1]+","+(cols*256)+",-"+(rows*256)+",1\n"
+		+"-----\n\n\n\n\n"
+		//2019-01-19 tambahin fitur file WLD untuk JPG nya
+		+i_z+"-"+i_x1+"_"+i_x2+"-"+i_y1+"_"+i_y2+"-"+(cols*256)+"x"+(rows*256) +".jgw\n"
+		//baris 1 adalah jarak per pixel untuk longitude eh koordinat x nya
+		//artinya jarak antara west dan east dibagi jumlah pixel
+		+ Math.abs(se3857[0]-nw3857[0]) / (cols*256) 
+		//baris 2 dan 3 selalu nol karena kita kan tidak ada tarik tarik dan puter
+		+"\n0\n0\n"
+		//baris 4 adalah jarak per pixel untuk  latitude eh koordinat y nya
+		//artinya jarak antara north dan south dibagi jumlah pixel
+		+ '-' +Math.abs(nw3857[1]-se3857[1]) / (rows*256)
+		+"\n"
+		//baris 5 dan 6 adalah koordinat kiri atas
+		+nw3857[0]+"\n"+nw3857[1]
+		+"\n-----\n\n\n\n\n"
+		+"JANGAN LUPA KASIH BARIS KOSONG SATU DI FILE WLD NYA YA";
 
 }
 
