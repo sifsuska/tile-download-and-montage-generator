@@ -13,7 +13,11 @@
 	
 <link rel="stylesheet" href="leaflet.css" />
 <script src="leaflet.js"></script>
+<script src="slippyMapTile.js"></script>
+<script src="proj4.js"></script>
 <script src="jquery-2.1.4.min.js"></script>
+<script src="jszip.min.js"></script>
+<script src="FileSaver.min.js"></script>
 </head>
 <body>
 	<div id="map"></div>
@@ -139,6 +143,131 @@ L.control.layers(baseMaps,checkboxedLayers).addTo(map);
 
 
 
+
+
+
+function xyzToPolygon(x,y,z){
+	var _bb = new BoundingBox(x,y,z);
+	return new L.Polygon([[_bb.north,_bb.west],[_bb.north,_bb.east],[_bb.south,_bb.east],[_bb.south,_bb.west]]);
+}
+
+function xyzToGeoJSON(x,y,z){
+	var g= xyzToPolygon(x,y,z).toGeoJSON()
+	g.properties={
+		x:x,
+		y:y,
+		z:z
+	};
+	return g;
+}
+/** fungsi untuk konversi dari x y zoom tile menjadi .WLD world file untuk raster*/
+function xyzToWLD(x,y,z){
+	var cols=1;
+	var rows=1;
+	var tempe = new BoundingBox(x,y,z);
+	var nw3857 = proj4('EPSG:4326','EPSG:3857',[tempe.west,tempe.north]);
+	var se3857 = proj4('EPSG:4326','EPSG:3857',[tempe.east,tempe.south]);
+	
+		return Math.abs(se3857[0]-nw3857[0]) / (cols*256) 
+		//baris 2 dan 3 selalu nol karena kita kan tidak ada tarik tarik dan puter
+		+"\n0\n0\n"
+		//baris 4 adalah jarak per pixel untuk  latitude eh koordinat y nya
+		//artinya jarak antara north dan south dibagi jumlah pixel
+		+ '-' +Math.abs(nw3857[1]-se3857[1]) / (rows*256)
+		+"\n"
+		//baris 5 dan 6 adalah koordinat kiri atas
+		+nw3857[0]+"\n"+nw3857[1]
+		+"\n-----\n\n\n\n\n";
+
+}
+
+
+function CMDxyzToWLD(x,y,z){
+	var cols=1;
+	var rows=1;
+	var tempe = new BoundingBox(x,y,z);
+	var nw3857 = proj4('EPSG:4326','EPSG:3857',[tempe.west,tempe.north]);
+	var se3857 = proj4('EPSG:4326','EPSG:3857',[tempe.east,tempe.south]);
+	
+		return 'ECHO '+ Math.abs(se3857[0]-nw3857[0]) / (cols*256) 
+		//baris 2 dan 3 selalu nol karena kita kan tidak ada tarik tarik dan puter
+		+" > "+y+".jgw\nECHO 0 >> "+y+".jgw\nECHO 0 >>"+y+".jgw\nECHO "
+		//baris 4 adalah jarak per pixel untuk  latitude eh koordinat y nya
+		//artinya jarak antara north dan south dibagi jumlah pixel
+		+ '-' +Math.abs(nw3857[1]-se3857[1]) / (rows*256)
+		+" >> "+y+".jgw\nECHO "
+		//baris 5 dan 6 adalah koordinat kiri atas
+		+nw3857[0]+" >> "+y+".jgw\nECHO "+nw3857[1]
+		+" >> "+y+".jgw\n\n\n\n";
+
+}
+
+
+/**
+Download GeoJSON file untuk zoom level tertentu
+@input zoom level, 0 adalah seluruh dunia, 1 adalah seperempatnya... dst
+@require slippyMapTile.js untuk  perhitungan batas bounding box koordinat tile x,y,z nya 
+@require leaflet.js untuk toGeoJSON
+@require FileSaver.js untuuk save as (download) file ke client
+*/
+function downloadZ(z){
+	// Create an empty GeoJSON collection
+	var collection = {
+		"type": "FeatureCollection",
+		"features": []
+	};
+	
+	//sekarang loop tiap x,y untuk z
+	for(x=0;x<(2**z);x++){
+		for(y=0;y<(2**z);y++){
+			g = xyzToGeoJSON(x,y,z);
+			collection.features.push(g);
+		}
+	}
+	
+	saveAs(new Blob([JSON.stringify(collection)], {type: "text/plain;charset=utf-8"}),'z'+z+'.geojson')
+	
+}
+//warning: ukuran bisa sangat besar kalau z sudah > 9
+
+
+/** download GeoJSON hanya dari rentang tertentu*/
+function downloadXYZ(x1,x2,y1,y2,z){
+	// Create an empty GeoJSON collection
+	var collection = {
+		"type": "FeatureCollection",
+		"features": []
+	};
+	
+	//sekarang loop tiap x,y untuk z
+	for(x=x1;x<=x2;x++){
+		for(y=y1;y<=y2;y++){
+			g = xyzToGeoJSON(x,y,z);
+			collection.features.push(g);
+		}
+	}
+	
+	saveAs(new Blob([JSON.stringify(collection)], {type: "text/plain;charset=utf-8"}),'z'+z+'x'+x1+'_'+x2+'y'+y1+'_'+y2+'.geojson')
+	
+}
+
+/** 
+fungsi untuk mendapatkan x dan y untuk zoom z tertentu pada bounds tertentu
+//function lat2tile(lat,zoom)
+//function long2tile(lon,zoom)
+*/
+function boundsToXY(bounds,z){
+	return {
+		x1: long2tile(bounds._southWest.lng, z), //west
+		x2: long2tile(bounds._northEast.lng, z), //east
+		y1: lat2tile(bounds._northEast.lat,z), // north
+		y2: lat2tile(bounds._southWest.lat,z)//south
+	};
+}
+//JSON.stringify(bukittinggi.getBounds())
+//"{"_southWest":{"lat":-0.38923,"lng":100.44781},"_northEast":{"lat":1.02991,"lng":101.6874}}"
+//boundsToXY(bukittinggi.getBounds(),7)
+//Object { x1: 99, x2: 100, y1: 63, y2: 64 }
 
 
 
