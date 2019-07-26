@@ -153,10 +153,28 @@ function xyzToPolygon(x,y,z){
 
 function xyzToGeoJSON(x,y,z){
 	var g= xyzToPolygon(x,y,z).toGeoJSON()
+	var bb = new BoundingBox(x,y,z);
+	var nw = proj4('EPSG:4326','EPSG:3857',[bb.west,bb.north]);
+	var se = proj4('EPSG:4326','EPSG:3857',[bb.east,bb.south]);
+
 	g.properties={
 		x:x,
 		y:y,
-		z:z
+		z:z,
+		n:bb.north,
+		w:bb.west,
+		s:bb.south,
+		e:bb.east,
+		
+		n3857:nw[0],
+		w3857:nw[1],
+		s3857:se[0],
+		e3857:se[1],
+		
+		//string bbox adalan wsen
+		bbox:bb.bbox,
+		//	this.bbox = this.west +','+this.south +','+this.east +','+ this.north
+		bbox3857:nw[1]+',' + se[0] + ',' + se[1] + ',' + nw[0]
 	};
 	return g;
 }
@@ -268,7 +286,8 @@ function boundsToXY(bounds,z){
 //"{"_southWest":{"lat":-0.38923,"lng":100.44781},"_northEast":{"lat":1.02991,"lng":101.6874}}"
 //boundsToXY(bukittinggi.getBounds(),7)
 //Object { x1: 99, x2: 100, y1: 63, y2: 64 }
-
+//boundsToXY(pku.getBounds(),11)
+//Object { x1: 1600, x2: 1602, y1: 1020, y2: 1021 }
 
 
 

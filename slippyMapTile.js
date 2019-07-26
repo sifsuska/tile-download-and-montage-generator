@@ -17,4 +17,6 @@ var BoundingBox = function(x,y,z){
     this.south = tile2lat(y + 1, z);
     this.west = tile2lon(x, z);
     this.east = tile2lon(x + 1, z);
+	//bbox adalah w,s,e,n
+	this.bbox = this.west +','+this.south +','+this.east +','+ this.north
 }
