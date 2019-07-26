@@ -145,12 +145,33 @@ L.control.layers(baseMaps,checkboxedLayers).addTo(map);
 
 
 
-
+/** 
+fungsi untuk menghasilkan polygon dari nomor ubin slippymap  
+@input int x koordinat horizontal
+@input int y koodinat vertikal
+@input int z zoom level
+@output leaflet polygon dalam WGS84 (latitudeLongitude)
+*/
 function xyzToPolygon(x,y,z){
 	var _bb = new BoundingBox(x,y,z);
-	return new L.Polygon([[_bb.north,_bb.west],[_bb.north,_bb.east],[_bb.south,_bb.east],[_bb.south,_bb.west]]);
+	return new L.Polygon(
+    [
+      [_bb.north,_bb.west]
+      ,[_bb.north,_bb.east]
+      ,[_bb.south,_bb.east]
+      ,[_bb.south,_bb.west]
+    ]
+  );
 }
 
+/** 
+fungsi untuk menghasilkan GeoJSON dari nomor ubin x,y dan zoom level z
+@input int x koordinat horizontal
+@input int y koodinat vertikal
+@input int z zoom level
+@output GeoJSON berbentuk kumpulan polygon dalam WGS84 (latitudeLongitude)
+  dan memiliki attribute koordinat EPSG:4326 sekaligus koordinat dalam EPSG:3857
+*/
 function xyzToGeoJSON(x,y,z){
 	var g= xyzToPolygon(x,y,z).toGeoJSON()
 	var bb = new BoundingBox(x,y,z);
@@ -178,7 +199,13 @@ function xyzToGeoJSON(x,y,z){
 	};
 	return g;
 }
-/** fungsi untuk konversi dari x y zoom tile menjadi .WLD world file untuk raster*/
+
+
+/** 
+fungsi untuk konversi dari x y zoom tile menjadi .WLD world file untuk raster
+@input x,y,z adalah koordinat slippymaptile
+@output 6 baris aturan worldfile untuk koordinat tersebut, dengan asumsi panjang setiap kolom adalah 256 pixel
+*/
 function xyzToWLD(x,y,z){
 	var cols=1;
 	var rows=1;
@@ -199,7 +226,9 @@ function xyzToWLD(x,y,z){
 
 }
 
-
+/** 
+fungsi untuk menghasilkan file *.JGW via command prompt dos
+*/
 function CMDxyzToWLD(x,y,z){
 	var cols=1;
 	var rows=1;
@@ -249,7 +278,10 @@ function downloadZ(z){
 //warning: ukuran bisa sangat besar kalau z sudah > 9
 
 
-/** download GeoJSON hanya dari rentang tertentu*/
+/** download GeoJSON hanya dari rentang tertentu
+fungsi ini untuk mengurangi kompleksitas fungsi downloadZ yang mendownload semua polygon
+yang ini hanya polygon dari x1 ke x2, lalu y1 ke y2 untuk zoom tertentu z
+*/
 function downloadXYZ(x1,x2,y1,y2,z){
 	// Create an empty GeoJSON collection
 	var collection = {
